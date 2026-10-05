@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Digit Recognizer</title>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 480px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        p.subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Canvas Styles */
+        .canvas-container {
+            position: relative;
+            margin: 0 auto 15px auto;
+            width: 200px;
+            height: 200px;
+        }
+
+        #drawCanvas {
+            background-color: #000;
+            border-radius: 8px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        /* Upload Zone Styles */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 25px 15px;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+            position: relative;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary-color);
+            background-color: #F9FAFB;
+        }
+
+        .drop-zone p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #imageInput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        #imagePreview {
+            max-width: 160px;
+            max-height: 160px;
+            margin-top: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 11px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #E5E7EB;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: #D1D5DB;
+        }
+
+        /* Result Section */
+        .result-card {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #predictionResult {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Digit Recognizer</h1>
+        <p class="subtitle">Draw or upload a handwritten digit (0-9)</p>
+
+        <!-- Mode Selection Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tabDrawBtn">Draw Digit</button>
+            <button class="tab-btn" id="tabUploadBtn">Upload Image</button>
+        </div>
+
+        <!-- Mode 1: Interactive Canvas -->
+        <div id="drawSection" class="tab-content active">
+            <div class="canvas-container">
+                <canvas id="drawCanvas" width="200" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Mode 2: File Upload -->
+        <div id="uploadSection" class="tab-content">
+            <div class="drop-zone" id="dropZone">
+                <p>Drag & Drop image here or <strong>Click to Browse</strong></p>
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+            <center><img id="imagePreview" src="#" alt="Image Preview"></center>
+        </div>
+
+        <!-- Controls -->
+        <div class="btn-group">
+            <button id="clearBtn" class="btn btn-secondary">Clear</button>
+            <button id="predictButton" class="btn btn-primary">Predict</button>
+        </div>
+
+        <!-- Result Card -->
+        <div class="result-card">
+            <div id="predictionResult">Draw or upload an image to begin</div>
+        </div>
+    </div>
+
+    <script>
+        // UI Tabs Switching
+        const tabDrawBtn = document.getElementById('tabDrawBtn');
+        const tabUploadBtn = document.getElementById('tabUploadBtn');
+        const drawSection = document.getElementById('drawSection');
+        const uploadSection = document.getElementById('uploadSection');
+        let currentMode = 'draw';
+
+        tabDrawBtn.addEventListener('click', () => {
+            currentMode = 'draw';
+            tabDrawBtn.classList.add('active');
+            tabUploadBtn.classList.remove('active');
+            drawSection.classList.add('active');
+            uploadSection.classList.remove('active');
+        });
+
+        tabUploadBtn.addEventListener('click', () => {
+            currentMode = 'upload';
+            tabUploadBtn.classList.add('active');
+            tabDrawBtn.classList.remove('active');
+            uploadSection.classList.add('active');
+            drawSection.classList.remove('active');
+        });
+
+        // Canvas Drawing Setup
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        function resetCanvas() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 14;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+        }
+        resetCanvas();
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+            const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+
+        // File Upload Handling
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        let selectedFile = null;
+
+        imageInput.addEventListener('change', function(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(selectedFile);
+            }
+        });
+
+        // Clear Action
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (currentMode === 'draw') {
+                resetCanvas();
+            } else {
+                imageInput.value = "";
+                selectedFile = null;
+                imagePreview.style.display = 'none';
+                imagePreview.src = '#';
+            }
+            document.getElementById('predictionResult').textContent = 'Draw or upload an image to begin';
+        });
+
+        // Predict Action
+        const predictButton = document.getElementById('predictButton');
+        const predictionResult = document.getElementById('predictionResult');
+
+        predictButton.addEventListener('click', function() {
+            const formData = new FormData();
+
+            if (currentMode === 'draw') {
+                canvas.toBlob((blob) => {
+                    formData.append('file', blob, 'drawing.png');
+                    sendPrediction(formData);
+                }, 'image/png');
+            } else {
+                if (!selectedFile) {
+                    predictionResult.textContent = 'Please select an image file first.';
+                    return;
+                }
+                formData.append('file', selectedFile);
+                sendPrediction(formData);
+            }
+        });
+
+        function sendPrediction(formData) {
+            predictionResult.textContent = 'Predicting...';
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.digit !== undefined) {
+                    predictionResult.textContent = `Predicted Digit: ${data.digit}`;
+                } else if (data.error) {
+                    predictionResult.textContent = `Error: ${data.error}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                predictionResult.textContent = 'An error occurred during prediction.';
+            });
+        }
+    </script>
+</body>
+</html>
